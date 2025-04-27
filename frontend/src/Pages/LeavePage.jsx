@@ -1,59 +1,96 @@
-import { useState } from "react";
+import React, { useState, useEffect } from "react";
+const apiUrl = import.meta.env.VITE_API_BASE_URL;
 
 const LeavePage = () => {
-  const [leaveStatus, setLeaveStatus] = useState("Pending"); // could be "Approved", "Rejected"
   const [showForm, setShowForm] = useState(false);
-  const [leaveReason, setLeaveReason] = useState("");
-  const [leaveDate, setLeaveDate] = useState("");
-  const [leaveDays, setLeaveDays] = useState(1);
-  const [leaveApplications, setLeaveApplications] = useState([]);
   const [employeeName, setEmployeeName] = useState("");
+  const [leaveType, setLeaveType] = useState("Sick");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [reason, setReason] = useState("");
+  const [leaveApplications, setLeaveApplications] = useState([]);
+  const [statusMessage, setStatusMessage] = useState("");
 
-  const handleApplyLeave = () => {
-    setShowForm(true);
+  const fetchLeaves = async () => {
+    try {
+      const res = await fetch(`${apiUrl}/leave/list`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
+      const data = await res.json();
+      setLeaveApplications(data.leaves || []);
+    } catch (err) {
+      console.error("Error fetching leaves:", err);
+    }
   };
 
-  const handleDateChange = (e) => {
-    const selectedDate = e.target.value;
-    setLeaveDate(selectedDate);
-    const startDate = new Date(selectedDate);
-    const endDate = new Date(); // You can change this logic if you want a different end date calculation
-    const diffTime = Math.abs(endDate - startDate);
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
-    setLeaveDays(diffDays);
+  useEffect(() => {
+    fetchLeaves();
+  }, []);
+
+  const calculateDays = () => {
+    if (!startDate || !endDate) return 0;
+    const s = new Date(startDate);
+    const e = new Date(endDate);
+    return Math.max(1, Math.ceil((e - s) / (1000 * 60 * 60 * 24)) + 1);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    const newLeaveApplication = {
-      name: employeeName,
-      reason: leaveReason,
-      date: leaveDate,
-      days: leaveDays,
-      status: leaveStatus,  // Adding status to each application
+    const newLeave = {
+      leaveType,
+      startDate,
+      endDate,
+      reason,
     };
-    setLeaveApplications([...leaveApplications, newLeaveApplication]);
-    setLeaveStatus("Pending");
-    setShowForm(false);
-    setLeaveReason("");
-    setLeaveDate("");
-    setLeaveDays(1);
-    setEmployeeName("");
+
+    try {
+      const response = await fetch(`${apiUrl}/leave/apply`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+        body: JSON.stringify(newLeave),
+      });
+
+      const textData = await response.text();
+      const data = textData ? JSON.parse(textData) : null;
+
+      if (data && data.success) {
+        setLeaveApplications((prev) => [...prev, data.leave]);
+        setStatusMessage("✅ Leave request submitted successfully");
+        setShowForm(false);
+        setStartDate("");
+        setEndDate("");
+        setLeaveType("Sick");
+        setReason("");
+      } else {
+        setStatusMessage(`❌ ${data?.message || "Something went wrong"}`);
+      }
+    } catch (error) {
+      console.error("Error submitting leave:", error);
+      setStatusMessage("❌ Failed to apply for leave.");
+    }
   };
 
   return (
     <div className="min-h-screen bg-gray-50 p-8 flex flex-col items-center">
-      <div className="bg-white p-8 rounded-lg shadow-lg w-full max-w-4xl flex justify-between">
-        <h2 className="text-3xl font-semibold text-gray-800 mb-6">Leave Status</h2>
+      <div className="bg-white p-8 rounded-lg shadow-lg w-full max-w-4xl flex justify-between items-center">
+        <h2 className="text-3xl font-semibold text-gray-800">Leave Status</h2>
         <button
-          onClick={handleApplyLeave}
+          onClick={() => setShowForm(true)}
           className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition duration-300"
         >
           Apply for Leave
         </button>
       </div>
 
-      {/* Leave Application Form Modal */}
+      {statusMessage && (
+        <div className="mt-4 text-center text-green-700 font-medium">{statusMessage}</div>
+      )}
+
       {showForm && (
         <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-20">
           <form
@@ -63,46 +100,38 @@ const LeavePage = () => {
             <h3 className="text-2xl font-semibold text-gray-700 mb-4">Leave Application</h3>
 
             <div className="mb-4">
-              <label className="block mb-2 text-gray-700 font-medium">Employee Name</label>
-              <input
-                type="text"
-                value={employeeName}
-                onChange={(e) => setEmployeeName(e.target.value)}
-                required
-                className="w-full border-2 border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-600"
-                placeholder="Enter your name"
-              />
+              <label className="block mb-2 text-gray-700 font-medium">Leave Type</label>
+              <select
+                value={leaveType}
+                onChange={(e) => setLeaveType(e.target.value)}
+                className="w-full border-2 border-gray-300 rounded-lg px-4 py-2"
+              >
+                <option value="Sick">Sick</option>
+                <option value="Casual">Casual</option>
+                <option value="Travel">Travel</option>
+                <option value="Other">Other</option>
+              </select>
             </div>
 
             <div className="mb-4">
-              <label className="block mb-2 text-gray-700 font-medium">Leave Reason</label>
-              <textarea
-                value={leaveReason}
-                onChange={(e) => setLeaveReason(e.target.value)}
-                required
-                className="w-full border-2 border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-600"
-                placeholder="e.g. Sick leave, Personal work..."
-              ></textarea>
-            </div>
-
-            <div className="mb-4">
-              <label className="block mb-2 text-gray-700 font-medium">Leave Date</label>
+              <label className="block mb-2 text-gray-700 font-medium">Start Date</label>
               <input
                 type="date"
-                value={leaveDate}
-                onChange={handleDateChange}
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
                 required
-                className="w-full border-2 border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                className="w-full border-2 border-gray-300 rounded-lg px-4 py-2"
               />
             </div>
 
             <div className="mb-4">
-              <label className="block mb-2 text-gray-700 font-medium">Number of Days</label>
+              <label className="block mb-2 text-gray-700 font-medium">End Date</label>
               <input
-                type="number"
-                value={leaveDays}
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
                 required
-                className="w-full border-2 border-gray-300 rounded-lg px-4 py-2 bg-gray-100"
+                className="w-full border-2 border-gray-300 rounded-lg px-4 py-2"
               />
             </div>
 
@@ -125,30 +154,32 @@ const LeavePage = () => {
         </div>
       )}
 
-      {/* Leave Applications Display like Attendance Sheet */}
       {leaveApplications.length > 0 && (
         <div className="bg-white p-8 rounded-lg shadow-xl w-full max-w-4xl mt-8">
           <h3 className="text-2xl font-semibold text-gray-800 mb-6">Leave Applications</h3>
-
-          {/* Table for displaying leave data */}
           <table className="min-w-full table-auto border-collapse">
             <thead>
               <tr className="bg-gray-200 text-gray-700">
-                <th className="border px-4 py-3 text-left font-medium">Employee Name</th>
-                <th className="border px-4 py-3 text-left font-medium">Leave Date</th>
-                <th className="border px-4 py-3 text-left font-medium">Leave Reason</th>
-                <th className="border px-4 py-3 text-left font-medium">Number of Days</th>
-                <th className="border px-4 py-3 text-left font-medium">Leave Status</th>
+                <th className="border px-4 py-3 text-left">Leave Type</th>
+                <th className="border px-4 py-3 text-left">Start Date</th>
+                <th className="border px-4 py-3 text-left">End Date</th>
+                <th className="border px-4 py-3 text-left">Days</th>
+                <th className="border px-4 py-3 text-left">Status</th>
               </tr>
             </thead>
             <tbody>
-              {leaveApplications.map((application, index) => (
-                <tr key={index} className="bg-white hover:bg-gray-50 transition duration-300">
-                  <td className="border px-4 py-3">{application.name}</td>
-                  <td className="border px-4 py-3">{application.date}</td>
-                  <td className="border px-4 py-3">{application.reason}</td>
-                  <td className="border px-4 py-3">{application.days}</td>
-                  <td className="border px-4 py-3">{application.status}</td>
+              {leaveApplications.map((leave) => (
+                <tr key={leave._id} className="bg-white hover:bg-gray-50 transition duration-300">
+                  <td className="border px-4 py-3">{leave.leaveType}</td>
+                  <td className="border px-4 py-3">{leave.startDate}</td>
+                  <td className="border px-4 py-3">{leave.endDate}</td>
+                  <td className="border px-4 py-3">
+                    {Math.ceil(
+                      (new Date(leave.endDate) - new Date(leave.startDate)) /
+                        (1000 * 60 * 60 * 24)
+                    ) + 1}
+                  </td>
+                  <td className="border px-4 py-3 text-yellow-600">{leave.status}</td>
                 </tr>
               ))}
             </tbody>

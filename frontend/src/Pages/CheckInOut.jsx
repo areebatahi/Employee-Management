@@ -1,20 +1,108 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+
+const apiUrl = import.meta.env.VITE_API_BASE_URL;
 
 const CheckInOut = () => {
   const [time, setTime] = useState(new Date());
-  const [status, setStatus] = useState(null); // null | "checkedIn" | "checkedOut"
+  const [employeeName, setEmployeeName] = useState('');
+  const [status, setStatus] = useState('Not Checked In');
+  const [isCheckedIn, setIsCheckedIn] = useState(false);
+  const [checkInTime, setCheckInTime] = useState('');
+  const [checkOutTime, setCheckOutTime] = useState('');
+  const [history, setHistory] = useState([]);
 
-  // Update time every second
   useEffect(() => {
     const interval = setInterval(() => setTime(new Date()), 1000);
     return () => clearInterval(interval);
   }, []);
 
+  useEffect(() => {
+    const storedName = localStorage.getItem('employeeName');
+    const storedCheckIn = localStorage.getItem('checkInTime');
+    const storedCheckOut = localStorage.getItem('checkOutTime');
+
+    if (storedName) {
+      setEmployeeName(storedName);
+      fetchHistory(storedName);
+    }
+    if (storedCheckIn && !storedCheckOut) {
+      setIsCheckedIn(true);
+      setCheckInTime(storedCheckIn);
+      setStatus("Checked In");
+    }
+    if (storedCheckOut) {
+      setCheckOutTime(storedCheckOut);
+      setIsCheckedIn(false);
+      setStatus("Checked Out");
+    }
+  }, []);
+
+  const formatDateTime = (dateTime) => {
+    const date = new Date(dateTime);
+    return date.toLocaleString(); // Format: "MM/DD/YYYY, HH:MM:SS AM/PM"
+  };
+
+  const handleCheckIn = async () => {
+    const currentCheckInTime = new Date().toISOString();
+
+    try {
+      const res = await axios.post(`${apiUrl}/checkin`, {
+        employeeName,
+        checkInTime: currentCheckInTime,
+      });
+
+      localStorage.setItem('employeeName', employeeName);
+      localStorage.setItem('checkInTime', currentCheckInTime);
+
+      setCheckInTime(currentCheckInTime);
+      setStatus("Checked In");
+      setIsCheckedIn(true);
+      fetchHistory(employeeName);
+    } catch (err) {
+      console.error('Check-in error:', err);
+    }
+  };
+
+  const handleCheckOut = async () => {
+    const currentCheckOutTime = new Date().toISOString();
+    const storedName = localStorage.getItem('employeeName');
+
+    try {
+      const res = await axios.post(`${apiUrl}/checkout`, {
+        employeeName: storedName,
+        checkOutTime: currentCheckOutTime,
+      });
+
+      localStorage.setItem('checkOutTime', currentCheckOutTime);
+
+      setCheckOutTime(currentCheckOutTime);
+      setStatus("Checked Out");
+      setIsCheckedIn(false);
+      fetchHistory(storedName);
+    } catch (err) {
+      console.error('Check-out error:', err);
+    }
+  };
+
+  const fetchHistory = async (name) => {
+    try {
+      const res = await axios.get(`${apiUrl}/history?employeeName=${name}`);
+      setHistory(res.data);
+    } catch (err) {
+      console.error('Error fetching history:', err);
+    }
+  };
+
   const handleCheck = () => {
-    if (status === "checkedIn") {
-      setStatus("checkedOut");
+    if (!employeeName.trim()) {
+      alert("Please enter your name.");
+      return;
+    }
+    if (isCheckedIn) {
+      handleCheckOut();
     } else {
-      setStatus("checkedIn");
+      handleCheckIn();
     }
   };
 
@@ -28,19 +116,27 @@ const CheckInOut = () => {
         <h2 className="text-2xl font-semibold mb-4">Check-In / Check-Out</h2>
         <p className="text-4xl font-bold mb-6">{formatTime(time)}</p>
 
-        {status && (
-          <p className={`mb-4 font-medium ${status === "checkedIn" ? "text-green-600" : "text-red-600"}`}>
-            You have {status === "checkedIn" ? "checked in" : "checked out"}
+        <input
+          type="text"
+          value={employeeName}
+          onChange={(e) => setEmployeeName(e.target.value)}
+          placeholder="Enter your name"
+          className="w-full p-2 border rounded-md mb-4"
+        />
+
+        {status !== 'Not Checked In' && (
+          <p className={`mb-2 font-medium ${isCheckedIn ? "text-green-600" : "text-red-600"}`}>
+            {status === "Checked In" ? `You checked in at ${formatDateTime(checkInTime)}` : `You checked out at ${formatDateTime(checkOutTime)}`}
           </p>
         )}
 
         <button
           onClick={handleCheck}
-          className={`px-6 py-2 rounded text-white transition ${
-            status === "checkedIn" ? "bg-red-600 hover:bg-red-700" : "bg-green-600 hover:bg-green-700"
+          className={`w-full px-6 py-2 rounded text-white transition ${
+            isCheckedIn ? "bg-red-600 hover:bg-red-700" : "bg-green-600 hover:bg-green-700"
           }`}
         >
-          {status === "checkedIn" ? "Check Out" : "Check In"}
+          {isCheckedIn ? "Check Out" : "Check In"}
         </button>
       </div>
     </div>

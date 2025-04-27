@@ -1,6 +1,9 @@
 import express from "express";
 import mongoose from "./db/dataBase.mjs";
-import userRoutes from "./routes/userRoutes.mjs"
+import userRoutes from "./routes/userRoutes.mjs";
+import checkInOutRoutes from './routes/checkInOutRoutes.mjs';
+import leaveForApplyRoutes from './routes/leaveForApplyRoutes.mjs';
+
 import cors from "cors";
 import connectToDB from "./db/dataBase.mjs";
 
@@ -20,7 +23,11 @@ app.use(
 
 app.use(express.json());
 const port = process.env.PORT || 5000;
+
 app.use("/api/auth",userRoutes)
+app.use('/api/leave', leaveForApplyRoutes);
+app.use('/api', checkInOutRoutes);
+
 
 app.use("/", (req, res, next) => {
   console.log("Request URL:", req.url, "method: ", req.method);
