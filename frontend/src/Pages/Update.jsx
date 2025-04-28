@@ -12,7 +12,7 @@ const Update = () => {
       const token = localStorage.getItem("token");
       if (!token) {
         toast.error("No authentication token found");
-        navigate("/login");
+        navigate("/");
         return;
       }
 
@@ -31,12 +31,12 @@ const Update = () => {
           setUserData({ name: data.user.name, email: data.user.email });
         } else {
           toast.error(data.message || "Failed to fetch user details");
-          navigate("/login");
+          navigate("/");
         }
       } catch (error) {
         console.error("Error fetching user details:", error);
         toast.error("An error occurred while fetching user details");
-        navigate("/login");
+        navigate("/");
       }
     };
 

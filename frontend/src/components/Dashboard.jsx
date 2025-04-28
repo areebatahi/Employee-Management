@@ -23,7 +23,7 @@ const Dashboard = () => {
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (!token) {
-      navigate("/login");
+      navigate("/");
       return;
     }
 
@@ -42,11 +42,11 @@ const Dashboard = () => {
           setUser(data.user);
           localStorage.setItem("employeeName", data.user.name); // save for checkin/out
         } else {
-          navigate("/login");
+          navigate("/");
         }
       } catch (error) {
         console.error("Error fetching user:", error);
-        navigate("/login");
+        navigate("/");
       } finally {
         setLoading(false);
       }

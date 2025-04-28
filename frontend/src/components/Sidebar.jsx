@@ -20,7 +20,7 @@ const Sidebar = () => {
 
   const authNavItems = isAuthenticated
     ? [
-      { to: "/", icon: faTachometerAlt, text: "Dashboard" },
+      { to: "/dashboard", icon: faTachometerAlt, text: "Dashboard" },
       { to: "/checkInOut", icon: faCalendarCheck, text: "Check-In/Out" },
       { to: "/leaves", icon: faClipboardList, text: "Leaves" },
       { to: "/profile", icon: faUser, text: "Profile" },
@@ -29,7 +29,7 @@ const Sidebar = () => {
     ]
     : [
       { to: "/signup", icon: faUserPlus, text: "Sign Up" },
-      { to: "/login", icon: faSignInAlt, text: "Login" },
+      { to: "/", icon: faSignInAlt, text: "Login" },
     ];
 
   return (

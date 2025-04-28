@@ -32,13 +32,13 @@ const App = () => {
         />
 
         <Routes>
-          <Route path="/" element={<Dashboard />} />
+          <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/checkInOut" element={<CheckInOut />} />
           <Route path="/leaves" element={<LeavePage />} />
           <Route path="/salary" element={<SalaryPage />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/logout" element={<Logout />} />
-          <Route path="/login" element={<LoginPage />} />
+          <Route path="/" element={<LoginPage />} />
           <Route path="/signup" element={<SignUp />} />
           <Route path="/update" element={<Update />} />
         </Routes>
