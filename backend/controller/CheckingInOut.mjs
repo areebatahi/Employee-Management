@@ -1,4 +1,4 @@
-import CheckInOut from '../models/CheakInOut/cheackInOut.mjs';
+import CheckInOut from '../models/CheakInOut/cheackinout.mjs';
 
 // Controller for handling Check-In and Check-Out logs
 const checkIn = async (req, res) => {
