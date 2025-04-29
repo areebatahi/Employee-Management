@@ -4,55 +4,96 @@ import "dotenv/config";
 import JWT from "jsonwebtoken";
 import userSchema from "../schema/userSchema.mjs";
 import chalk from "chalk";
+import uploadToCloudinary from '../config/cloudinary.mjs';
 
-const userLogin = async (req, res) => {
+// =============================================
+// ✅ LOGIN USER
+// =============================================
+const loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
-    const user = await User.findOne({ email });
 
-    if (user) {
-      const checkPassword = bcrypt.compareSync(password, user.password);
-      if (checkPassword) {
-        var token = JWT.sign({ userId: user._id }, process.env.JWT_SECRET);
-
-        res
-          .status(200)
-          .json({ status: 200, message: "Login Successfull", user, token });
-      } else {
-        res.status(401).json({ status: 401, message: "Incorrect Password" });
-      }
-    } else {
-      res.status(404).json({ status: 404, message: "User not found" });
+    if (!email || !password) {
+      return res.status(400).json({ message: "Email and password are required" });
     }
-  } catch (err) {
-    console.log(err);
-    res.status(400).json({ error: err, status: 400 });
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(401).json({ message: "Invalid credentials" });
+    }
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(401).json({ message: "Invalid credentials" });
+    }
+
+    const token = JWT.sign({ id: user._id }, process.env.JWT_SECRET, {
+      expiresIn: "1d",
+    });
+
+    res.status(200).json({
+      message: "Login successful",
+      token,
+      user: {
+        id: user._id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        profileImage: user.profileImage,
+      },
+    });
+  } catch (error) {
+    console.error("Login error:", error);
+    res.status(500).json({ message: "Internal Server Error", error: error.message });
   }
 };
 
+// =============================================
+// ✅ CREATE USER ACCOUNT
+// =============================================
 const createUserAccount = async (req, res) => {
-  console.log(chalk.bgCyan("incoming call to signup api"));
-  if (!req.body) {
-    return req.status(400).json({ message: "Bad request" });
-  }
-  try {
-    const user = await userSchema.validateAsync(req.body);
-    const password = await bcrypt.hash(user.password, 10);
-    const newUser = await User.create({ ...user, password: password });
+  console.log(chalk.bgCyan("Incoming call to signup API"));
 
-    await newUser.save();
+  try {
+    let profileImageUrl = null;
+
+    if (req.file) {
+      const result = await uploadToCloudinary(req.file.buffer);
+      profileImageUrl = result.secure_url;
+    } else {
+      return res.status(400).json({ message: "Profile image is required" });
+    }
+
+    const user = await userSchema.validateAsync({
+      ...req.body,
+      profileImage: profileImageUrl,
+    });
+
+    const hashedPassword = await bcrypt.hash(user.password, 10);
+
+    const newUser = await User.create({
+      ...user,
+      password: hashedPassword,
+    });
 
     res.status(201).json({
       message: "User created successfully",
-      user: { id: newUser.id, email: newUser.email },
+      user: {
+        id: newUser._id,
+        firstName: newUser.firstName,
+        lastName: newUser.lastName,
+        email: newUser.email,
+        profileImage: newUser.profileImage,
+      },
     });
   } catch (error) {
     if (error?.code === 11000) {
       return res.status(409).json({
-        message: "Duplicate email - Email already exists",
+        message: "Email already exists",
         error: error.message,
       });
     }
+
     console.error(chalk.bgRed("Signup Error:"), error);
     res.status(500).json({
       message: "Internal Server Error",
@@ -61,27 +102,30 @@ const createUserAccount = async (req, res) => {
   }
 };
 
-const getAllUsersAccounts = async (req, res) => {
+// =============================================
+// ✅ GET LOGGED-IN USER PROFILE
+// =============================================
+const getUserProfile = async (req, res) => {
   try {
-    const users = await User.find();
-    res.json(users);
-  } catch (err) {
-    res.status(400).json({ error: err, status: 400 });
-  }
-};
-
-const getLoggedInUserAccount = async (req, res) => {
-  try {
-
-    const {userId}= req.user
-    // The tokenVerification middleware already decodes the token and attaches the user's email to `req.user`
-    const user = await User.findById(userId)
+    const { id } = req.user;
+    const user = await User.findById(id);
 
     if (!user) {
       return res.status(404).json({ status: 404, message: "User not found" });
     }
 
-    res.status(200).json({ status: 200, user });
+    res.status(200).json({
+      status: 200,
+      user: {
+        id: user._id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        gender: user.gender,
+        profileImage: user.profileImage,
+        created_at: user.created_at,
+      },
+    });
   } catch (error) {
     console.error("Error fetching user details:", error);
     res.status(500).json({
@@ -92,6 +136,21 @@ const getLoggedInUserAccount = async (req, res) => {
   }
 };
 
+// =============================================
+// ✅ GET ALL USERS (ADMIN ONLY)
+// =============================================
+const getAllUsersAccounts = async (req, res) => {
+  try {
+    const users = await User.find();
+    res.json(users);
+  } catch (err) {
+    res.status(400).json({ error: err, status: 400 });
+  }
+};
+
+// =============================================
+// ✅ DELETE USER
+// =============================================
 const deleteUserAccount = async (req, res) => {
   try {
     const { id } = req.params;
@@ -102,42 +161,58 @@ const deleteUserAccount = async (req, res) => {
   }
 };
 
+// =============================================
+// ✅ UPDATE USER
+// =============================================
 const updateUserAccount = async (req, res) => {
   try {
     const { id } = req.params;
+
+    if (req.file) {
+      const result = await uploadToCloudinary(req.file.buffer);
+      req.body.profileImage = result.secure_url;
+    }
+
     const user = await User.findByIdAndUpdate(id, req.body, { new: true });
     res.json({ message: "User updated successfully", user });
   } catch (err) {
     res.status(400).json({ error: err, status: 400 });
   }
 };
-export {
-userLogin,
-createUserAccount,
-getAllUsersAccounts,
-deleteUserAccount,
-updateUserAccount,
-getLoggedInUserAccount
+
+// =============================================
+// ✅ CHECK ADMIN
+// =============================================
+const isAdmin = async (req, res) => {
+  const { id: userId } = req.user;
+  const { role } = await User.findById(userId);
+
+  if (role !== "admin") {
+    console.log("❌ user is not an admin");
+    return res.status(401).json({
+      success: false,
+      message: "❌ user is not an admin",
+      isAdmin: false,
+    });
+  }
+
+  res.status(200).json({
+    success: true,
+    message: "✔ user is an admin",
+    isAdmin: true,
+  });
+  console.log("✔ user is an admin");
 };
 
-// for admin
-
-export const isAdmin = async (req, res) => {
-  const { userId } = req.user;
-  const {role} = await User.findById(userId);
-  
-  if(role !== "admin"){
-    console.log("❌ user is not an admin")
-   return  res.status(401).json({
-      success:false,
-      message:"❌ user is not an admin",
-      isAdmin :false
-    })
-  }
-  res.status(200).json({
-    success:true,
-    message:"✔ user is  an admin",
-    isAdmin :true
-  })
-console.log("✔ user is  an admin")
+// =============================================
+// ✅ EXPORTS
+// =============================================
+export {
+  loginUser,
+  createUserAccount,
+  getUserProfile,
+  getAllUsersAccounts,
+  deleteUserAccount,
+  updateUserAccount,
+  isAdmin,
 };

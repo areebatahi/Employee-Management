@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
-const apiUrl = import.meta.env.VITE_API_BASE_URL;
+const apiUrl = import.meta.env.VITE_API_BASE_URL;  // Ensure this is defined in your .env file
 
 const CheckInOut = () => {
   const [time, setTime] = useState(new Date());
@@ -18,7 +18,7 @@ const CheckInOut = () => {
   }, []);
 
   useEffect(() => {
-    const storedName = localStorage.getItem('employeeName');
+    const storedName = localStorage.getItem('username');
     const storedCheckIn = localStorage.getItem('checkInTime');
     const storedCheckOut = localStorage.getItem('checkOutTime');
 
@@ -44,11 +44,16 @@ const CheckInOut = () => {
   };
 
   const handleCheckIn = async () => {
+    if (!employeeName.trim()) {
+      alert("Please enter your name.");
+      return;
+    }
+
     const currentCheckInTime = new Date().toISOString();
 
     try {
       const res = await axios.post(`${apiUrl}/checkin`, {
-        employeeName,
+        employeeName,  // Send employee name to backend
         checkInTime: currentCheckInTime,
       });
 
@@ -68,9 +73,14 @@ const CheckInOut = () => {
     const currentCheckOutTime = new Date().toISOString();
     const storedName = localStorage.getItem('employeeName');
 
+    if (!storedName) {
+      alert("Please enter your name to check out.");
+      return;
+    }
+
     try {
       const res = await axios.post(`${apiUrl}/checkout`, {
-        employeeName: storedName,
+        employeeName: storedName,  // Send employee name to backend
         checkOutTime: currentCheckOutTime,
       });
 
@@ -88,7 +98,9 @@ const CheckInOut = () => {
   const fetchHistory = async (name) => {
     try {
       const res = await axios.get(`${apiUrl}/history?employeeName=${name}`);
-      setHistory(res.data);
+      if (res.data) {
+        setHistory(res.data);
+      }
     } catch (err) {
       console.error('Error fetching history:', err);
     }
@@ -132,9 +144,7 @@ const CheckInOut = () => {
 
         <button
           onClick={handleCheck}
-          className={`w-full px-6 py-2 rounded text-white transition ${
-            isCheckedIn ? "bg-red-600 hover:bg-red-700" : "bg-green-600 hover:bg-green-700"
-          }`}
+          className={`w-full px-6 py-2 rounded text-white transition ${isCheckedIn ? "bg-red-600 hover:bg-red-700" : "bg-green-600 hover:bg-green-700"}`}
         >
           {isCheckedIn ? "Check Out" : "Check In"}
         </button>

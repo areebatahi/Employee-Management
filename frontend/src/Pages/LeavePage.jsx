@@ -3,7 +3,7 @@ const apiUrl = import.meta.env.VITE_API_BASE_URL;
 
 const LeavePage = () => {
   const [showForm, setShowForm] = useState(false);
-  const [employeeName, setEmployeeName] = useState("");
+  const [employeeName, setEmployeeName] = useState(localStorage.getItem("username") || ""); // Fetch employeeName from localStorage
   const [leaveType, setLeaveType] = useState("Sick");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -38,11 +38,19 @@ const LeavePage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // Check if 'reason' is empty
+    if (!reason.trim()) {
+      setStatusMessage("❌ Please provide a reason for the leave.");
+      return;
+    }
+
     const newLeave = {
       leaveType,
       startDate,
       endDate,
       reason,
+      employeeName, // Use the state variable for employeeName
     };
 
     try {
@@ -55,10 +63,9 @@ const LeavePage = () => {
         body: JSON.stringify(newLeave),
       });
 
-      const textData = await response.text();
-      const data = textData ? JSON.parse(textData) : null;
+      const data = await response.json();
 
-      if (data && data.success) {
+      if (data.success) {
         setLeaveApplications((prev) => [...prev, data.leave]);
         setStatusMessage("✅ Leave request submitted successfully");
         setShowForm(false);
@@ -135,6 +142,17 @@ const LeavePage = () => {
               />
             </div>
 
+            <div className="mb-4">
+              <label className="block mb-2 text-gray-700 font-medium">Reason</label>
+              <textarea
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                required
+                className={`w-full border-2 ${reason.trim() ? 'border-gray-300' : 'border-red-500'} rounded-lg px-4 py-2`}
+                placeholder="Please provide a reason for the leave"
+              />
+            </div>
+
             <div className="flex justify-end space-x-2">
               <button
                 type="button"
@@ -175,8 +193,8 @@ const LeavePage = () => {
                   <td className="border px-4 py-3">{leave.endDate}</td>
                   <td className="border px-4 py-3">
                     {Math.ceil(
-                      (new Date(leave.endDate) - new Date(leave.startDate)) /
-                        (1000 * 60 * 60 * 24)
+                      (new Date(leave.endDate) - new Date(leave.startDate)) / 
+                      (1000 * 60 * 60 * 24)
                     ) + 1}
                   </td>
                   <td className="border px-4 py-3 text-yellow-600">{leave.status}</td>

@@ -12,6 +12,7 @@ const Dashboard = () => {
   const [isCheckedIn, setIsCheckedIn] = useState(false);
   const [checkInTime, setCheckInTime] = useState("");
   const [checkOutTime, setCheckOutTime] = useState("");
+  const [salary, setSalary] = useState(null);
 
   const navigate = useNavigate();
 
@@ -41,6 +42,7 @@ const Dashboard = () => {
         if (response.ok) {
           setUser(data.user);
           localStorage.setItem("employeeName", data.user.name); // save for checkin/out
+          setSalary(data.user.salary); // Dynamically setting the salary
         } else {
           navigate("/");
         }
@@ -154,9 +156,7 @@ const Dashboard = () => {
 
           <button
             onClick={handleCheck}
-            className={`w-full px-6 py-2 mt-2 rounded text-white transition ${
-              isCheckedIn ? "bg-red-600 hover:bg-red-700" : "bg-green-600 hover:bg-green-700"
-            }`}
+            className={`w-full px-6 py-2 mt-2 rounded text-white transition ${isCheckedIn ? "bg-red-600 hover:bg-red-700" : "bg-green-600 hover:bg-green-700"}`}
           >
             {isCheckedIn ? "Check Out" : "Check In"}
           </button>
@@ -170,7 +170,7 @@ const Dashboard = () => {
           </span>
           <br />
           <button
-            onClick={() => navigate("/leave")}
+            onClick={() => navigate("/leaves")}
             className="bg-gray-100 text-gray-800 px-4 py-2 rounded hover:bg-gray-200 transition"
           >
             Apply for Leave
@@ -179,18 +179,34 @@ const Dashboard = () => {
 
         {/* Profile Summary */}
         <div className="bg-white p-6 rounded-lg shadow flex items-center gap-4">
-          <div className="w-16 h-16 rounded-full bg-gray-300" />
+          {/* Display Profile Picture */}
+          <div className="w-16 h-16 rounded-full overflow-hidden">
+            {user?.profilePicture ? (
+              <img
+                src={user?.profileImage}
+                alt="Profile"
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="w-full h-full bg-gray-300 flex justify-center items-center">
+                <span className="text-xl text-white">{user?.name?.charAt(0)}</span> {/* Safely access first letter of the name */}
+              </div>
+            )}
+          </div>
+
+          {/* Display Full Name and Email */}
           <div>
-            <p className="font-semibold">{user.name}</p>
-            <p className="text-sm text-gray-500">{user.email}</p>
+            <p className="font-semibold">{user?.firstName} {user?.lastName}</p> {/* Add null check for user */}
+            <p className="text-sm text-gray-500">{user?.email}</p> {/* Add null check for email */}
           </div>
         </div>
 
-        {/* Salary */}
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h3 className="text-lg font-semibold mb-2">Salary</h3>
-          <p className="text-3xl font-bold text-gray-800">$90,000</p>
-        </div>
+       {/* Salary */}
+<div className="bg-white p-6 rounded-lg shadow">
+  <h3 className="text-lg font-semibold mb-2">Salary</h3>
+  <p className="text-3xl font-bold text-gray-800">{salary ? `$${salary}` : "Loading..."}</p>
+</div>
+
       </div>
     </div>
   );

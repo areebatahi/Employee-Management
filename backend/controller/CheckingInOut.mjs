@@ -1,13 +1,15 @@
-import CheckInOut from '../models/CheakInOut/cheackinout.mjs';
+import CheckInOut from '../models/CheakInOut/cheackinout.mjs'; // Import model
 
-// Controller for handling Check-In and Check-Out logs
+// Controller for handling Check-In logs
 const checkIn = async (req, res) => {
   const { employeeName, checkInTime } = req.body;
 
   try {
+    // Save the check-in record
     const newCheckIn = new CheckInOut({
       employeeName,
       checkInTime,
+      checkOutTime: null, // Initially, no check-out time
     });
 
     await newCheckIn.save();
@@ -17,16 +19,19 @@ const checkIn = async (req, res) => {
   }
 };
 
+// Controller for handling Check-Out logs
 const checkOut = async (req, res) => {
   const { employeeName, checkOutTime } = req.body;
 
   try {
+    // Find the last check-in record for this employee that hasn't been checked out yet
     const checkInData = await CheckInOut.findOne({ employeeName, checkOutTime: null });
 
     if (!checkInData) {
       return res.status(400).send({ message: 'No active Check-In found' });
     }
 
+    // Set the check-out time and save the record
     checkInData.checkOutTime = checkOutTime;
     await checkInData.save();
     res.status(200).send({ message: 'Check-Out data saved successfully' });
@@ -35,61 +40,45 @@ const checkOut = async (req, res) => {
   }
 };
 
-const getCheckInOutHistory = (req, res) => {
+// Controller to get Check-In/Check-Out history
+const getCheckInOutHistory = async (req, res) => {
   const { employeeName } = req.query;
 
   if (!employeeName) {
     return res.status(400).json({ message: "Employee name is required" });
   }
 
-  // If history exists, return it
-  const history = checkHistory[employeeName] || [];
-
-  res.status(200).json(history);
+  try {
+    const history = await CheckInOut.find({ employeeName });
+    if (!history.length) {
+      return res.status(404).json({ message: 'No history found for this employee' });
+    }
+    res.status(200).json(history);
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching history', error });
+  }
 };
 
 
-const getCheckInOutStatus = (req, res) => {
+// Controller to get Check-In/Check-Out status
+const getCheckInOutStatus = async (req, res) => {
   const { employeeName } = req.query;
 
-  const checkIn = checkInData[employeeName];
-  const checkOut = checkOutData[employeeName];
+  try {
+    // Fetch the latest check-in and check-out times
+    const latestCheckIn = await CheckInOut.findOne({ employeeName }).sort({ checkInTime: -1 });
 
-  console.log(`Status requested for: ${employeeName}`);
-  console.log(`Check-In: ${checkIn?.time}, Check-Out: ${checkOut?.time}`);
-
-  res.status(200).json({
-    checkInTime: checkIn?.time || null,
-    checkOutTime: checkOut?.time || null,
-  });
-};
-
-export { checkIn, checkOut, getCheckInOutHistory, getCheckInOutStatus }
-
-// Use arrays to store history
-let checkHistory = {};
-
-export const logCheckInhis = (req, res) => {
-  const { employeeName, checkInTime } = req.body;
-  if (!checkHistory[employeeName]) {
-    checkHistory[employeeName] = [];
-  }
-
-  checkHistory[employeeName].push({ checkInTime, checkOutTime: null });
-  res.status(200).json({ message: "Check-In recorded." });
-};
-
-export const checkOuthis = (req, res) => {
-  const { employeeName, checkOutTime } = req.body;
-
-  const employeeLogs = checkHistory[employeeName];
-  if (employeeLogs && employeeLogs.length > 0) {
-    const lastLog = employeeLogs[employeeLogs.length - 1];
-    if (!lastLog.checkOutTime) {
-      lastLog.checkOutTime = checkOutTime;
-      return res.status(200).json({ message: "Check-Out recorded." });
+    if (!latestCheckIn) {
+      return res.status(404).json({ message: 'No check-in record found for this employee' });
     }
-  }
 
-  res.status(400).json({ message: "No check-in found to check out from." });
+    res.status(200).json({
+      checkInTime: latestCheckIn.checkInTime,
+      checkOutTime: latestCheckIn.checkOutTime || null,
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching status', error });
+  }
 };
+
+export { checkIn, checkOut, getCheckInOutHistory, getCheckInOutStatus };

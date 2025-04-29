@@ -4,28 +4,34 @@ import { toast } from "react-toastify";
 import { Formik, Form, Field, ErrorMessage } from "formik";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 import * as Yup from "yup";
+
 const apiUrl = import.meta.env.VITE_API_BASE_URL;
 
-// Validation Schema (Same as Backend Joi)
 const validationSchema = Yup.object({
-  name: Yup.string()
-    .matches(/^[a-zA-Z0-9]+$/, "name can only contain letters and numbers (No spaces or special characters)")
-    .min(3, "name must be at least 3 characters long")
-    .max(20, "name cannot exceed 20 characters")
-    .required("name is required"),
+  firstName: Yup.string()
+    .matches(/^[a-zA-Z]+$/, "Only letters are allowed")
+    .min(2, "First name must be at least 2 characters")
+    .required("First name is required"),
+
+  lastName: Yup.string()
+    .matches(/^[a-zA-Z]+$/, "Only letters are allowed")
+    .min(2, "Last name must be at least 2 characters")
+    .required("Last name is required"),
 
   email: Yup.string()
-    .email("Enter a valid email address (e.g., example@domain.com)")
+    .email("Enter a valid email address")
     .matches(/^[^\s@]+@[^\s@]+\.(com|net)$/, "Only .com and .net domains are allowed")
     .required("Email is required"),
 
-
   password: Yup.string()
-    .min(3, "Password must be at least 3 characters long")
+    .min(3, "Password must be at least 3 characters")
     .max(30, "Password must not exceed 30 characters")
-    .matches(/^[^\s]*$/, "Only letters (A-Z, a-z) and numbers (0-9) are allowed. No spaces.")
-    .matches(/^[a-zA-Z0-9]*$/, "Only letters (A-Z, a-z) and numbers (0-9) are allowed.")
+    .matches(/^[a-zA-Z0-9]*$/, "Only alphanumeric characters allowed")
     .required("Password is required"),
+
+  gender: Yup.string().oneOf(["male", "female", "other"], "Select a gender").required("Gender is required"),
+
+  profileImage: Yup.mixed().required("Profile image is required"),
 });
 
 const Signup = () => {
@@ -39,87 +45,151 @@ const Signup = () => {
         <h2 className="text-2xl font-semibold text-gray-800 text-center">Sign Up</h2>
         <p className="text-gray-500 text-center mb-6">Welcome! Enter your details to register.</p>
 
-        {/* ✅ Formik Handling */}
         <Formik
-          initialValues={{ name: "", email: "", password: "" }}
+          initialValues={{
+            firstName: "",
+            lastName: "",
+            email: "",
+            password: "",
+            gender: "",
+            profileImage: null,
+          }}
           validationSchema={validationSchema}
           onSubmit={async (values) => {
             setLoading(true);
-            console.log("values:", values);
             try {
+              const formData = new FormData();
+
+              // Append fields except profileImage
+              for (const key in values) {
+                if (key !== "profileImage") {
+                  formData.append(key, values[key]);
+                }
+              }
+
+              // Append the image with correct key name 'image'
+              formData.append("image", values.profileImage);
+
               const response = await fetch(`${apiUrl}/auth/user`, {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(values),
+                body: formData,
               });
 
               const data = await response.json();
               setLoading(false);
-              console.log("Response:", response, "data", data);
-              if (response.ok) {  
+
+              if (response.ok) {
                 toast.success(data.message);
-                navigate('/dashboard');
+                localStorage.setItem("username", `${values.firstName} ${values.lastName}`);
+                navigate("/dashboard");
               } else {
-                toast.error(data.message || "An error occurred while signing up");
+                toast.error(data.message || "Signup failed");
               }
             } catch (error) {
               setLoading(false);
-              console.log("Error:", error);
-              toast.error(error.message || "An error occurred while signing up");
+              toast.error("Error: " + error.message);
             }
           }}
         >
-          <Form className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Your Name</label>
-              <Field
-                name="name"
-                type="text"
-                className="w-full mt-1 p-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Enter your name"
-              />
-              <ErrorMessage name="name" component="p" className="text-red-500 text-sm" />
-            </div>
+          {({ setFieldValue, values }) => (
+            <Form className="space-y-4">
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Email</label>
-              <Field
-                name="email"
-                type="email"
-                className="w-full mt-1 p-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Enter your email"
-              />
-              <ErrorMessage name="email" component="p" className="text-red-500 text-sm" />
-            </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">First Name</label>
+                  <Field
+                    name="firstName"
+                    type="text"
+                    className="w-full mt-1 p-2 border rounded-md"
+                    placeholder="First name"
+                  />
+                  <ErrorMessage name="firstName" component="p" className="text-red-500 text-sm" />
+                </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Password</label>
-              <div className='relative'>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Last Name</label>
+                  <Field
+                    name="lastName"
+                    type="text"
+                    className="w-full mt-1 p-2 border rounded-md"
+                    placeholder="Last name"
+                  />
+                  <ErrorMessage name="lastName" component="p" className="text-red-500 text-sm" />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Email</label>
                 <Field
-                  name="password"
-                  type={showPassword ? "text" : "password"}
-                  className="w-full mt-1 p-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="Enter your password"
+                  name="email"
+                  type="email"
+                  className="w-full mt-1 p-2 border rounded-md"
+                  placeholder="Email"
                 />
-                <button
-                  type="button"
-                  className='absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-600 focus:outline-none'
-                  onClick={() => { setShowPassword(!showPassword) }}
-                >
-                  {showPassword ? <FaEyeSlash /> : <FaEye />}
-                </button>
+                <ErrorMessage name="email" component="p" className="text-red-500 text-sm" />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Password</label>
+                <div className="relative">
+                  <Field
+                    name="password"
+                    type={showPassword ? "text" : "password"}
+                    className="w-full mt-1 p-2 border rounded-md"
+                    placeholder="Password"
+                  />
+                  <button
+                    type="button"
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-600"
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? <FaEyeSlash /> : <FaEye />}
+                  </button>
+                </div>
                 <ErrorMessage name="password" component="p" className="text-red-500 text-sm" />
               </div>
-            </div>
 
-            <button
-              type="submit"
-              className="w-full bg-gray-800 hover:bg-gray-900 text-white font-medium py-2 rounded-md transition-all duration-300 disabled:bg-gray-500"
-              disabled={loading}
-            >
-              {loading ? "Signing Up..." : "Sign Up"}
-            </button>
-          </Form>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Gender</label>
+                <Field as="select" name="gender" className="w-full mt-1 p-2 border rounded-md">
+                  <option value="">Select gender</option>
+                  <option value="male">Male</option>
+                  <option value="female">Female</option>
+                  <option value="other">Other</option>
+                </Field>
+                <ErrorMessage name="gender" component="p" className="text-red-500 text-sm" />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Profile Image</label>
+                <input
+                  name="profileImage"
+                  type="file"
+                  accept="image/*"
+                  onChange={(event) => {
+                    setFieldValue("profileImage", event.currentTarget.files[0]);
+                  }}
+                  className="w-full mt-1 p-2 border rounded-md"
+                />
+                <ErrorMessage name="profileImage" component="p" className="text-red-500 text-sm" />
+                {values.profileImage && (
+                  <img
+                    src={URL.createObjectURL(values.profileImage)}
+                    alt="Preview"
+                    className="w-20 h-20 mt-2 rounded-full object-cover"
+                  />
+                )}
+              </div>
+
+              <button
+                type="submit"
+                className="w-full bg-gray-800 hover:bg-gray-900 text-white py-2 rounded-md transition-all duration-300 disabled:bg-gray-500"
+                disabled={loading}
+              >
+                {loading ? "Signing Up..." : "Sign Up"}
+              </button>
+            </Form>
+          )}
         </Formik>
       </div>
     </div>

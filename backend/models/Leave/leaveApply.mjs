@@ -1,15 +1,14 @@
-// leave.mjs
-import mongoose from 'mongoose';
+import mongoose from "mongoose";
 
-const LeaveSchema = new mongoose.Schema({
-  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-  startDate: String,
-  endDate: String,
-  leaveType: String,
-  reason: String,
-  status: { type: String, default: 'Pending' },
+const leaveApplicationSchema = new mongoose.Schema({
+  employeeName: { type: String, required: true },
+  leaveType: { type: String, required: true, enum: ["Sick", "Casual", "Travel", "Other"] },
+  startDate: { type: Date, required: true },
+  endDate: { type: Date, required: true },
+  reason: { type: String, required: true },
+  status: { type: String, default: "Pending" }, // Default status is Pending
 });
 
-const Leave = mongoose.model('Leave', LeaveSchema);
+const LeaveApplication = mongoose.model("LeaveApplication", leaveApplicationSchema);
 
-export default Leave; // ✅ ES module export
+export default LeaveApplication;

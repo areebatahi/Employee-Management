@@ -1,11 +1,10 @@
 import mongoose from 'mongoose';
 
-// Mongoose schema for CheckIn/CheckOut logs
 const checkInOutSchema = new mongoose.Schema({
-  employeeName: String,
-  checkInTime: String,
-  checkOutTime: String,
-}, { timestamps: true });
+  employeeName: { type: String, required: true },
+  checkInTime: { type: Date, required: true },
+  checkOutTime: { type: Date, default: null },
+});
 
 const CheckInOut = mongoose.model('CheckInOut', checkInOutSchema);
 
