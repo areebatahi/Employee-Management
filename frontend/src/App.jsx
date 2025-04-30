@@ -1,24 +1,40 @@
 import React from 'react';
-import { Routes, Route } from 'react-router-dom';
-import LoginPage from './Pages/LoginPage';
-import SignUp from './Pages/Signup';
-import Logout from "./Pages/Logout";
-import Profile from "./Pages/Profile";
-import Update from './Pages/Update';
-import { ToastContainer } from 'react-toastify';
+import { Routes, Route, useLocation } from 'react-router-dom';
 import 'react-toastify/dist/ReactToastify.css';
+import { ToastContainer } from 'react-toastify';
 import Sidebar from './components/Sidebar';
+
+// ---------------- Authentication ------------------
+import SignUp from './Pages/authentication/Signup';
+import LoginPage from './Pages/authentication/LoginPage';
+import Logout from "./Pages/authentication/Logout";
+import Update from './Pages/authentication/Update';
+
+// ------------------- user --------------------------
 import Dashboard from './components/Dashboard';
-import CheckInOut from './Pages/CheckInOut';
-import LeavePage from './Pages/LeavePage';
-import SalaryPage from './Pages/SalaryPage';
+import UserCheckInOut from './Pages/user/UserCheckInOut'
+import LeavePage from './Pages/user/LeavePage';
+import UserSalaryPage from './Pages/user/UserSalaryPage';
+import Profile from "./Pages/user/Profile";
+
+// -------------------- Admin Setup ---------------------
+import AdminDashboard from './components/AdminDashboard';
+import EmployeeManagement from './Pages/admin/EmployeeManagement';
+import LeaveRequests from './Pages/admin/LeaveRequets';
+import SalaryPage from './Pages/admin/SalaryPage';
+import CheckInOut from './Pages/admin/CheckInOut';
 
 const App = () => {
-  return (
-    <div className="flex">
-      <Sidebar />
+  const location = useLocation();
+  const isAdminRoute = location.pathname.startsWith('/admin'); // ✅ Updated check
 
-      <div className="flex-1 ml-64 min-h-screen bg-gray-50 p-4">
+  return (
+    <>
+      {!isAdminRoute && ( // ✅ Sidebar only for user side
+        <Sidebar />
+      )}
+
+      <div className={`${!isAdminRoute ? "ml-64" : ""} flex-1 min-h-screen bg-gray-50 p-4`}>
         <ToastContainer
           position="top-right"
           autoClose={5000}
@@ -32,19 +48,28 @@ const App = () => {
         />
 
         <Routes>
+          {/* ---------- User Routes ---------- */}
           <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/checkInOut" element={<CheckInOut />} />
+          <Route path="/userCheckInOut" element={<UserCheckInOut />} />
           <Route path="/leaves" element={<LeavePage />} />
-          <Route path="/salary" element={<SalaryPage />} />
+          <Route path="/salary" element={<UserSalaryPage />} />
           <Route path="/profile" element={<Profile />} />
-          <Route path="/logout" element={<Logout />} />
+
+          {/* ---------- Auth Routes ---------- */}
           <Route path="/" element={<LoginPage />} />
           <Route path="/signup" element={<SignUp />} />
           <Route path="/update" element={<Update />} />
+          <Route path="/logout" element={<Logout />} />
+
+          {/* ---------- Admin Routes ---------- */}
+          <Route path="/admin" element={<AdminDashboard />} />
+          <Route path="/admin/employees" element={<EmployeeManagement />} />
+          <Route path="/admin/leaves" element={<LeaveRequests />} />
+          <Route path="/admin/salary" element={<SalaryPage />} />
+          <Route path="/admin/checkInOut" element={<CheckInOut />} />
         </Routes>
       </div>
-    </div>
+    </>
   );
 };
-
-export default App;
+export default App

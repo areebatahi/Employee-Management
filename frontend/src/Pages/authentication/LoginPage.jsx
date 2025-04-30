@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
 import { useDispatch } from 'react-redux';
-import { loginSuccess } from '../store/authSlice';
+import { loginSuccess } from "../../store/authSlice.mjs"
 const apiUrl = import.meta.env.VITE_API_BASE_URL;
 
 const Login = () => {
@@ -40,11 +40,11 @@ const Login = () => {
 			const data = await response.json();
 			setLoading(false);
 			if (response.ok) {
-				localStorage.setItem("token",data.token)
-				localStorage.setItem("userId",data._id)
+				localStorage.setItem("token", data.token)
+				localStorage.setItem("userId", data._id)
 				dispatch(loginSuccess({
-					token:data.token,
-					userId:data.userId
+					token: data.token,
+					userId: data.userId
 				}))
 				toast.success(data.message);
 
