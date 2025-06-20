@@ -25,9 +25,8 @@ app.use(express.json());
 const port = process.env.PORT || 5000;
 
 app.use("/api/auth",userRoutes)
-app.use('/api/leave', leaveForApplyRoutes);
 app.use('/api', checkInOutRoutes);
-
+app.use("/api/leaves", leaveForApplyRoutes);
 
 app.use("/", (req, res, next) => {
   console.log("Request URL:", req.url, "method: ", req.method);

@@ -144,7 +144,7 @@ const UserCheckInOut = () => {
             <button
               onClick={handleCheck}
               className={`w-full px-6 py-2 rounded text-white mt-2 md:mt-0 ${
-                isCheckedIn ? "bg-red-600 hover:bg-red-700" : "bg-green-600 hover:bg-green-700"
+                isCheckedIn ? "bg-red-600 hover:bg-red-700" : "bg-green-600 hover:bg-green-700 cursor-pointer"
               }`}
             >
               {isCheckedIn ? "Check Out" : "Check In"}

@@ -1,14 +1,12 @@
 import mongoose from "mongoose";
 
-const leaveApplicationSchema = new mongoose.Schema({
+const LeaveApplicationSchema = new mongoose.Schema({
   employeeName: { type: String, required: true },
-  leaveType: { type: String, required: true, enum: ["Sick", "Casual", "Travel", "Other"] },
-  startDate: { type: Date, required: true },
-  endDate: { type: Date, required: true },
+  leaveType: { type: String, required: true },
+  startDate: { type: String, required: true },
+  endDate: { type: String, required: true },
   reason: { type: String, required: true },
-  status: { type: String, default: "Pending" }, // Default status is Pending
+  status: { type: String, default: "Pending" }, // New field
 });
 
-const LeaveApplication = mongoose.model("LeaveApplication", leaveApplicationSchema);
-
-export default LeaveApplication;
+export default mongoose.model("LeaveApplication", LeaveApplicationSchema);

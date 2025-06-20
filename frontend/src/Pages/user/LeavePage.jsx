@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from "react";
+
 const apiUrl = import.meta.env.VITE_API_BASE_URL;
 
 const LeavePage = () => {
   const [showForm, setShowForm] = useState(false);
-  const [employeeName, setEmployeeName] = useState(localStorage.getItem("username") || ""); // Fetch employeeName from localStorage
+  const [employeeName, setEmployeeName] = useState(localStorage.getItem("username") || "");
   const [leaveType, setLeaveType] = useState("Sick");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -13,35 +14,54 @@ const LeavePage = () => {
 
   const fetchLeaves = async () => {
     try {
-      const res = await fetch(`${apiUrl}/leave/list`, {
+      const res = await fetch(`${apiUrl}/leaves/applications?employeeName=${employeeName}`, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
       });
+
+      const contentType = res.headers.get("content-type");
+      if (!res.ok || !contentType?.includes("application/json")) {
+        throw new Error("Server error or invalid response format");
+      }
+
       const data = await res.json();
-      setLeaveApplications(data.leaves || []);
+      const updatedLeaves = data.leaves || [];
+      setLeaveApplications(updatedLeaves);
+      localStorage.setItem("leaveApplications", JSON.stringify(updatedLeaves));
     } catch (err) {
       console.error("Error fetching leaves:", err);
+      setStatusMessage("❌ Could not fetch leave applications.");
     }
   };
 
   useEffect(() => {
-    fetchLeaves();
-  }, []);
+    const cachedLeaves = localStorage.getItem("leaveApplications");
+    if (cachedLeaves) {
+      setLeaveApplications(JSON.parse(cachedLeaves));
+    }
 
-  const calculateDays = () => {
-    if (!startDate || !endDate) return 0;
-    const s = new Date(startDate);
-    const e = new Date(endDate);
+    if (employeeName) {
+      fetchLeaves();
+    }
+  }, [employeeName]);
+
+  const calculateDays = (start, end) => {
+    const s = new Date(start);
+    const e = new Date(end);
     return Math.max(1, Math.ceil((e - s) / (1000 * 60 * 60 * 24)) + 1);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Check if 'reason' is empty
     if (!reason.trim()) {
       setStatusMessage("❌ Please provide a reason for the leave.");
+      return;
+    }
+
+    if (new Date(startDate) > new Date(endDate)) {
+      setStatusMessage("❌ End date must be after start date.");
       return;
     }
 
@@ -50,11 +70,11 @@ const LeavePage = () => {
       startDate,
       endDate,
       reason,
-      employeeName, // Use the state variable for employeeName
+      employeeName,
     };
 
     try {
-      const response = await fetch(`${apiUrl}/leave/apply`, {
+      const response = await fetch(`${apiUrl}/leaves/apply`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -63,18 +83,25 @@ const LeavePage = () => {
         body: JSON.stringify(newLeave),
       });
 
+      const contentType = response.headers.get("content-type");
+      if (!response.ok || !contentType?.includes("application/json")) {
+        throw new Error("Invalid server response");
+      }
+
       const data = await response.json();
 
       if (data.success) {
-        setLeaveApplications((prev) => [...prev, data.leave]);
+        const updatedList = [...leaveApplications, data.leave];
+        setLeaveApplications(updatedList);
+        localStorage.setItem("leaveApplications", JSON.stringify(updatedList));
         setStatusMessage("✅ Leave request submitted successfully");
         setShowForm(false);
+        setLeaveType("Sick");
         setStartDate("");
         setEndDate("");
-        setLeaveType("Sick");
         setReason("");
       } else {
-        setStatusMessage(`❌ ${data?.message || "Something went wrong"}`);
+        setStatusMessage(`❌ ${data.message || "Something went wrong"}`);
       }
     } catch (error) {
       console.error("Error submitting leave:", error);
@@ -88,14 +115,14 @@ const LeavePage = () => {
         <h2 className="text-3xl font-semibold text-gray-800">Leave Status</h2>
         <button
           onClick={() => setShowForm(true)}
-          className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition duration-300"
+          className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition duration-300 cursor-pointer"
         >
           Apply for Leave
         </button>
       </div>
 
       {statusMessage && (
-        <div className="mt-4 text-center text-green-700 font-medium">{statusMessage}</div>
+        <div className="mt-4 text-center font-medium text-sm text-red-600">{statusMessage}</div>
       )}
 
       {showForm && (
@@ -148,7 +175,9 @@ const LeavePage = () => {
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
                 required
-                className={`w-full border-2 ${reason.trim() ? 'border-gray-300' : 'border-red-500'} rounded-lg px-4 py-2`}
+                className={`w-full border-2 ${
+                  reason.trim() ? "border-gray-300" : "border-red-500"
+                } rounded-lg px-4 py-2`}
                 placeholder="Please provide a reason for the leave"
               />
             </div>
@@ -157,13 +186,13 @@ const LeavePage = () => {
               <button
                 type="button"
                 onClick={() => setShowForm(false)}
-                className="bg-gray-300 px-6 py-3 rounded-lg hover:bg-gray-400 transition duration-300"
+                className="bg-gray-300 px-6 py-3 rounded-lg hover:bg-gray-400 transition duration-300 cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition duration-300"
+                className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition duration-300 cursor-pointer"
               >
                 Submit
               </button>
@@ -189,15 +218,18 @@ const LeavePage = () => {
               {leaveApplications.map((leave) => (
                 <tr key={leave._id} className="bg-white hover:bg-gray-50 transition duration-300">
                   <td className="border px-4 py-3">{leave.leaveType}</td>
-                  <td className="border px-4 py-3">{leave.startDate}</td>
-                  <td className="border px-4 py-3">{leave.endDate}</td>
                   <td className="border px-4 py-3">
-                    {Math.ceil(
-                      (new Date(leave.endDate) - new Date(leave.startDate)) / 
-                      (1000 * 60 * 60 * 24)
-                    ) + 1}
+                    {new Date(leave.startDate).toLocaleDateString()}
                   </td>
-                  <td className="border px-4 py-3 text-yellow-600">{leave.status}</td>
+                  <td className="border px-4 py-3">
+                    {new Date(leave.endDate).toLocaleDateString()}
+                  </td>
+                  <td className="border px-4 py-3">
+                    {calculateDays(leave.startDate, leave.endDate)}
+                  </td>
+                  <td className="border px-4 py-3 text-yellow-600">
+                    {leave.status || "Pending"}
+                  </td>
                 </tr>
               ))}
             </tbody>

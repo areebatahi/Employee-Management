@@ -3,7 +3,6 @@ import LeaveApplication from "../models/Leave/leaveApply.mjs";
 const applyForLeave = async (req, res) => {
   const { leaveType, startDate, endDate, reason, employeeName } = req.body;
 
-  // Check if reason is provided
   if (!reason || reason.trim() === "") {
     return res.status(400).json({
       success: false,
@@ -21,6 +20,7 @@ const applyForLeave = async (req, res) => {
     });
 
     await newLeaveApplication.save();
+
     res.status(201).json({
       success: true,
       message: "Leave application submitted successfully",
@@ -51,3 +51,37 @@ const getLeaveApplications = async (req, res) => {
 };
 
 export { applyForLeave, getLeaveApplications };
+
+
+
+/* const updateLeaveStatus = async (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body;
+
+  // Validate allowed statuses
+  if (!["Pending", "Approved", "Rejected"].includes(status)) {
+    return res.status(400).json({ success: false, message: "Invalid status" });
+  }
+
+  try {
+    const updatedLeave = await LeaveApplication.findByIdAndUpdate(
+      id,
+      { status },
+      { new: true }
+    );
+
+    if (!updatedLeave) {
+      return res.status(404).json({ success: false, message: "Leave not found" });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Leave status updated successfully",
+      leave: updatedLeave,
+    });
+  } catch (error) {
+    console.error("Error updating leave status:", error);
+    res.status(500).json({ success: false, message: "Failed to update leave status" });
+  }
+};
+*/

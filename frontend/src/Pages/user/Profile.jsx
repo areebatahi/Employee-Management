@@ -146,7 +146,7 @@ const Profile = () => {
         <div className="bg-gray-50 p-4">
           <button
             onClick={() => navigate("/dashboard")}
-            className="w-full bg-gray-800 hover:bg-gray-900 text-white font-medium py-2 rounded-md transition-all duration-300"
+            className="w-full bg-gray-800 hover:bg-gray-900 text-white font-medium py-2 rounded-md transition-all duration-300 cursor-pointer"
           >
             Go to Home
           </button>
